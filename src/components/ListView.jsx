@@ -1,45 +1,169 @@
-import React, { useState, useMemo } from 'react';
-import EventModal from './EventModal';
-import { formatDisplayDate } from '../utils/dateUtils';
+import React, { useState, useMemo } from "react";
+import EventModal from "./EventModal";
+import { formatDisplayDate } from "../utils/dateUtils";
 
-const TYPE_LABELS = { gig: '🎵 Gig', vacation: '🏖️ Vacation', audition: '🎭 Audition' };
-const TYPE_BADGE = {
-  gig: 'bg-green-100 text-green-800',
-  vacation: 'bg-blue-100 text-blue-800',
-  audition: 'bg-yellow-100 text-yellow-800',
+/* -- Design tokens ------------------------ */
+const T = {
+  gig:      { label: "Gig",      emoji: "??", fg: "#065f46", bg: "#d1fae5", border: "#34d399" },
+  vacation: { label: "Vacation", emoji: "???", fg: "#1e40af", bg: "#dbeafe", border: "#60a5fa" },
+  audition: { label: "Audition", emoji: "??", fg: "#92400e", bg: "#fef3c7", border: "#fbbf24" },
 };
 
-const SORT_OPTIONS = [
-  { value: 'startDate', label: 'Date' },
-  { value: 'groupName', label: 'Name' },
-  { value: 'type', label: 'Type' },
-];
+function fmtRange(s, e) {
+  if (!s) return "";
+  const a = new Date(s + "T12:00:00");
+  const b = (e && e !== s) ? new Date(e + "T12:00:00") : null;
+  const mo = { month: "short", day: "numeric" };
+  if (!b) return a.toLocaleDateString("en-US", mo);
+  if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear())
+    return a.toLocaleDateString("en-US", mo) + " – " + b.getDate();
+  return a.toLocaleDateString("en-US", mo) + " – " + b.toLocaleDateString("en-US", mo);
+}
 
+/* -- EventCard --------------------------- */
+function EventCard({ event, onEdit, onDelete, idx }) {
+  const [open, setOpen] = useState(false);
+  const t = T[event.type] || T.gig;
+  const accent = event.color || t.border;
+  const hasExtra = !!(event.repertoire || event.notes || event.finalsDate);
+
+  return (
+    <div
+      className="bg-white rounded-2xl overflow-hidden mb-3 card-shadow"
+      style={{ animation: `slideUp 0.35s cubic-bezier(0.16,1,0.3,1) ${idx * 0.04}s both` }}
+    >
+      {/* Main row */}
+      <div
+        style={{ display: "flex", cursor: hasExtra ? "pointer" : "default" }}
+        onClick={() => hasExtra && setOpen(v => !v)}
+      >
+        {/* Accent bar */}
+        <div style={{ width: 5, background: accent, flexShrink: 0 }} />
+
+        {/* Content */}
+        <div style={{ flex: 1, padding: "14px 14px 14px 16px", minWidth: 0 }}>
+          {/* Row 1: badge + date */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <span
+              style={{
+                fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
+                color: t.fg, background: t.bg,
+                padding: "3px 10px", borderRadius: 99,
+              }}
+            >
+              {t.emoji} {t.label.toUpperCase()}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: "#94a3b8", flexShrink: 0 }}>
+              {fmtRange(event.startDate, event.endDate)}
+            </span>
+          </div>
+
+          {/* Row 2: name */}
+          <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginTop: 8, lineHeight: 1.3 }}>
+            {event.groupName}
+          </div>
+
+          {/* Row 3: repertoire + payment */}
+          {(event.repertoire || event.payment) && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 6 }}>
+              {event.repertoire ? (
+                <span style={{ fontSize: 13, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                  {event.repertoire}
+                </span>
+              ) : <span />}
+              {event.payment && (
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: "#065f46",
+                  background: "#ecfdf5", border: "1px solid #a7f3d0",
+                  padding: "2px 8px", borderRadius: 99, flexShrink: 0, marginLeft: 8,
+                }}>
+                  {event.payment}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Chevron */}
+        {hasExtra && (
+          <div style={{ display: "flex", alignItems: "center", paddingRight: 14 }}>
+            <svg
+              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round"
+              style={{ transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }}
+            >
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        )}
+      </div>
+
+      {/* Expanded section */}
+      {open && hasExtra && (
+        <div style={{ borderTop: "1px solid #f1f5f9", padding: "12px 16px 16px 21px" }}>
+          {event.repertoire && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.08em", marginBottom: 2 }}>REPERTOIRE</div>
+              <div style={{ fontSize: 14, color: "#334155" }}>{event.repertoire}</div>
+            </div>
+          )}
+          {event.finalsDate && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.08em", marginBottom: 2 }}>FINALS DATE</div>
+              <div style={{ fontSize: 14, color: "#b45309", fontWeight: 600 }}>{formatDisplayDate(event.finalsDate)}</div>
+            </div>
+          )}
+          {event.notes && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.08em", marginBottom: 2 }}>NOTES</div>
+              <div style={{ fontSize: 14, color: "#334155" }}>{event.notes}</div>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button
+              onClick={e => { e.stopPropagation(); onEdit(event); }}
+              style={{
+                flex: 1, padding: "9px 0", borderRadius: 12, border: "none",
+                background: "#eff6ff", color: "#2563eb", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >?? Edit</button>
+            <button
+              onClick={e => { e.stopPropagation(); onDelete(event); }}
+              style={{
+                flex: 1, padding: "9px 0", borderRadius: 12, border: "none",
+                background: "#fef2f2", color: "#ef4444", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >??? Delete</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* -- Confirm Delete ----------------------- */
 function ConfirmDelete({ event, onConfirm, onCancel }) {
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       onClick={onCancel}
+      style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60, padding: 20, animation: "overlayIn 0.15s ease" }}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full"
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
+        style={{ background: "white", borderRadius: 24, padding: "28px 24px", maxWidth: 360, width: "100%", animation: "scaleIn 0.2s cubic-bezier(0.16,1,0.3,1)" }}
+        className="card-shadow-lg"
       >
-        <h3 className="text-lg font-semibold text-slate-800 mb-2">Delete Entry?</h3>
-        <p className="text-sm text-slate-500 mb-5">
-          "{event.groupName}" will be permanently removed.
+        <div style={{ fontSize: 40, textAlign: "center", marginBottom: 12 }}>???</div>
+        <h3 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", textAlign: "center", marginBottom: 8 }}>Delete Entry?</h3>
+        <p style={{ fontSize: 14, color: "#64748b", textAlign: "center", marginBottom: 24, lineHeight: 1.5 }}>
+          "<strong>{event.groupName}</strong>" will be permanently removed.
         </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium text-sm"
-          >
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: "1.5px solid #e2e8f0", background: "white", color: "#475569", fontWeight: 600, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>
             Cancel
           </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-medium text-sm"
-          >
+          <button onClick={onConfirm} style={{ flex: 1, padding: "12px 0", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>
             Delete
           </button>
         </div>
@@ -48,268 +172,205 @@ function ConfirmDelete({ event, onConfirm, onCancel }) {
   );
 }
 
-function EventRow({ event, onEdit, onDelete }) {
-  const [expanded, setExpanded] = useState(false);
-  const hasExtras = event.payment || event.repertoire || event.notes || event.finalsDate;
-
+/* -- Empty State -------------------------- */
+function EmptyState({ onAdd }) {
   return (
-    <>
-      <tr
-        className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
-        style={{ borderLeft: `4px solid ${event.color || '#94a3b8'}` }}
-        onClick={() => hasExtras && setExpanded((v) => !v)}
-      >
-        {/* Color swatch + type */}
-        <td className="py-2.5 pl-3 pr-2 whitespace-nowrap">
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_BADGE[event.type]}`}
-          >
-            {TYPE_LABELS[event.type]}
-          </span>
-        </td>
-
-        {/* Name */}
-        <td className="py-2.5 px-2 text-sm font-medium text-slate-800 min-w-[120px]">
-          {event.groupName}
-        </td>
-
-        {/* Dates */}
-        <td className="py-2.5 px-2 text-xs text-slate-500 whitespace-nowrap hidden sm:table-cell">
-          {event.startDate === event.endDate || !event.endDate
-            ? formatDisplayDate(event.startDate)
-            : `${formatDisplayDate(event.startDate)} – ${formatDisplayDate(event.endDate)}`}
-        </td>
-
-        {/* Payment */}
-        <td className="py-2.5 px-2 text-xs text-slate-600 hidden md:table-cell">
-          {event.payment || <span className="text-slate-300">—</span>}
-        </td>
-
-        {/* Actions */}
-        <td className="py-2.5 pr-3 pl-2 whitespace-nowrap text-right">
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(event); }}
-            className="text-blue-500 hover:text-blue-700 text-xs font-medium mr-3"
-          >
-            Edit
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(event); }}
-            className="text-red-400 hover:text-red-600 text-xs font-medium"
-          >
-            Delete
-          </button>
-        </td>
-      </tr>
-
-      {/* Mobile date row */}
-      <tr className="sm:hidden border-b border-slate-100">
-        <td colSpan={5} className="pb-2 pl-3 text-xs text-slate-400">
-          {event.startDate === event.endDate || !event.endDate
-            ? formatDisplayDate(event.startDate)
-            : `${formatDisplayDate(event.startDate)} – ${formatDisplayDate(event.endDate)}`}
-          {event.payment ? ` · ${event.payment}` : ''}
-        </td>
-      </tr>
-
-      {/* Expanded details */}
-      {expanded && hasExtras && (
-        <tr className="bg-slate-50 border-b border-slate-200">
-          <td colSpan={5} className="px-4 pb-3 pt-1">
-            <div className="space-y-1 text-xs text-slate-600">
-              {event.repertoire && (
-                <div><span className="font-semibold text-slate-500">Repertoire: </span>{event.repertoire}</div>
-              )}
-              {event.finalsDate && (
-                <div><span className="font-semibold text-slate-500">Finals: </span>{formatDisplayDate(event.finalsDate)}</div>
-              )}
-              {event.notes && (
-                <div><span className="font-semibold text-slate-500">Notes: </span>{event.notes}</div>
-              )}
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 32px", textAlign: "center" }}>
+      <div style={{ fontSize: 64, marginBottom: 16 }}>??</div>
+      <h3 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>No entries yet</h3>
+      <p style={{ fontSize: 15, color: "#64748b", marginBottom: 28, lineHeight: 1.6 }}>Add your gigs, vacations, and auditions to see them here and in the calendar.</p>
+      <button
+        onClick={onAdd}
+        style={{
+          padding: "14px 32px", borderRadius: 16, border: "none",
+          background: "linear-gradient(135deg,#6366f1,#4f46e5)",
+          color: "white", fontWeight: 700, fontSize: 16, cursor: "pointer",
+          boxShadow: "0 4px 14px rgba(79,70,229,0.35)", fontFamily: "inherit",
+        }}
+      >+ Add First Entry</button>
+    </div>
   );
 }
 
+/* -- Stat Chip ---------------------------- */
+function Chip({ value, label, fg, bg }) {
+  return (
+    <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 12, padding: "8px 14px", flexShrink: 0, backdropFilter: "blur(8px)" }}>
+      <div style={{ color: "white", fontWeight: 800, fontSize: 18, lineHeight: 1 }}>{value}</div>
+      <div style={{ color: "rgba(255,255,255,0.7)", fontWeight: 600, fontSize: 11, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+/* -- Main component ----------------------- */
 export default function ListView({ events, addEvent, updateEvent, deleteEvent }) {
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [deletingEvent, setDeletingEvent] = useState(null);
-  const [filter, setFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('startDate');
-  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("startDate");
 
-  const filtered = useMemo(() => {
-    return events
-      .filter((ev) => {
-        if (filter !== 'all' && ev.type !== filter) return false;
-        if (search) {
-          const s = search.toLowerCase();
-          return (
-            ev.groupName.toLowerCase().includes(s) ||
-            ev.repertoire?.toLowerCase().includes(s) ||
-            ev.notes?.toLowerCase().includes(s)
-          );
-        }
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'startDate') return (a.startDate || '').localeCompare(b.startDate || '');
-        if (sortBy === 'groupName') return a.groupName.localeCompare(b.groupName);
-        if (sortBy === 'type') return a.type.localeCompare(b.type);
-        return 0;
-      });
-  }, [events, filter, sortBy, search]);
+  const now = new Date();
+  const monthLabel = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-  function handleSave(formData) {
-    if (editingEvent) {
-      updateEvent(editingEvent.id, formData);
-    } else {
-      addEvent(formData);
-    }
+  const gigCount = events.filter(e => e.type === "gig").length;
+  const vacCount = events.filter(e => e.type === "vacation").length;
+  const audCount = events.filter(e => e.type === "audition").length;
+  const upcoming = events.filter(e => e.startDate && new Date(e.startDate + "T12:00:00") >= now).length;
+  const totalPay = events
+    .filter(e => e.type === "gig" && e.payment)
+    .reduce((s, e) => { const n = parseFloat(e.payment.replace(/[^0-9.]/g, "")); return isNaN(n) ? s : s + n; }, 0);
+
+  const filtered = useMemo(() => events
+    .filter(ev => {
+      if (filter !== "all" && ev.type !== filter) return false;
+      if (search) {
+        const s = search.toLowerCase();
+        return ev.groupName.toLowerCase().includes(s)
+          || ev.repertoire?.toLowerCase().includes(s)
+          || ev.notes?.toLowerCase().includes(s);
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "startDate") return (a.startDate || "").localeCompare(b.startDate || "");
+      if (sortBy === "groupName") return a.groupName.localeCompare(b.groupName);
+      if (sortBy === "type") return a.type.localeCompare(b.type);
+      return 0;
+    }), [events, filter, sortBy, search]);
+
+  function handleSave(fd) {
+    if (editingEvent) updateEvent(editingEvent.id, fd);
+    else addEvent(fd);
     setShowModal(false);
     setEditingEvent(null);
   }
 
-  function handleEdit(ev) {
-    setEditingEvent(ev);
-    setShowModal(true);
-  }
-
-  function handleDeleteConfirm() {
-    if (deletingEvent) {
-      deleteEvent(deletingEvent.id);
-      setDeletingEvent(null);
-    }
-  }
-
   return (
-    <div className="flex flex-col h-full pb-16">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 pt-safe">
-        <div className="flex items-center justify-between py-3">
-          <h1 className="text-xl font-bold text-slate-800">My Schedule</h1>
-          <button
-            onClick={() => { setEditingEvent(null); setShowModal(true); }}
-            className="flex items-center gap-1.5 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-blue-700 active:bg-blue-800 transition-colors"
-          >
-            <span className="text-lg leading-none">+</span> Add
-          </button>
-        </div>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100dvh" }} className="pb-nav">
+      {/* -- Hero Header -- */}
+      <div
+        style={{
+          background: "linear-gradient(135deg, #4338ca 0%, #5b21b6 60%, #4f46e5 100%)",
+          paddingLeft: 20, paddingRight: 20,
+          paddingTop: "calc(var(--safe-t) + 20px)",
+          paddingBottom: 24,
+        }}
+      >
+        <div style={{ color: "rgba(199,210,254,0.9)", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{monthLabel}</div>
+        <h1 style={{ color: "white", fontSize: 28, fontWeight: 800, letterSpacing: "-0.5px", margin: 0 }}>
+          Your Schedule
+        </h1>
 
+        {events.length > 0 && (
+          <div style={{ display: "flex", gap: 8, marginTop: 16, overflowX: "auto" }} className="scrollbar-none">
+            {gigCount > 0   && <Chip value={gigCount}  label="Gigs"      />}
+            {vacCount > 0   && <Chip value={vacCount}  label="Vacations" />}
+            {audCount > 0   && <Chip value={audCount}  label="Auditions" />}
+            {upcoming > 0   && <Chip value={upcoming}  label="Upcoming"  />}
+            {totalPay > 0   && <Chip value={"$" + totalPay.toLocaleString()} label="Earned" />}
+          </div>
+        )}
+      </div>
+
+      {/* -- Search + Filter (sticky) -- */}
+      <div style={{
+        position: "sticky", top: 0, zIndex: 20,
+        background: "rgba(255,255,255,0.94)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+        borderBottom: "1px solid #e2e8f0",
+        padding: "12px 16px 10px",
+      }}>
         {/* Search */}
-        <div className="mb-3">
+        <div style={{ position: "relative", marginBottom: 10 }}>
+          <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }}
+            width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
           <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search entries..."
-            className="w-full border border-slate-200 bg-slate-50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            type="search" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search name, repertoire…"
+            style={{
+              width: "100%", paddingLeft: 36, paddingRight: 12, paddingTop: 10, paddingBottom: 10,
+              background: "#f1f5f9", border: "none", borderRadius: 12,
+              fontSize: 14, color: "#0f172a", outline: "none", fontFamily: "inherit",
+            }}
           />
         </div>
 
-        {/* Filter + Sort */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {['all', 'gig', 'vacation', 'audition'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                filter === f
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300'
-              }`}
-            >
-              {f === 'all' ? 'All' : TYPE_LABELS[f]}
+        {/* Filters */}
+        <div style={{ display: "flex", gap: 6, overflowX: "auto" }} className="scrollbar-none">
+          {[
+            { v: "all",      l: "All",        n: events.length },
+            { v: "gig",      l: "?? Gigs",     n: gigCount },
+            { v: "vacation", l: "??? Vacations", n: vacCount },
+            { v: "audition", l: "?? Auditions", n: audCount },
+          ].map(f => (
+            <button key={f.v} onClick={() => setFilter(f.v)} style={{
+              flexShrink: 0, padding: "6px 12px", borderRadius: 99, border: "none",
+              background: filter === f.v ? "#4f46e5" : "#f1f5f9",
+              color: filter === f.v ? "white" : "#64748b",
+              fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              transition: "all 0.15s",
+            }}>
+              {f.l} <span style={{ opacity: 0.65 }}>{f.n}</span>
             </button>
           ))}
-          <div className="ml-auto shrink-0 flex items-center gap-1">
-            <span className="text-xs text-slate-400">Sort:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none"
-            >
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{
+              fontSize: 11, fontWeight: 600, color: "#64748b",
+              border: "1px solid #e2e8f0", borderRadius: 8, padding: "4px 6px",
+              background: "white", cursor: "pointer", fontFamily: "inherit",
+            }}>
+              <option value="startDate">Date</option>
+              <option value="groupName">Name</option>
+              <option value="type">Type</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-auto">
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-60 text-slate-400">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-14 h-14 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p className="text-sm font-medium">No entries yet</p>
-            <p className="text-xs mt-1">Tap + Add to create your first entry</p>
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="py-2 pl-3 pr-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Name</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Date(s)</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Payment</th>
-                <th className="py-2 pr-3 pl-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((ev) => (
-                <EventRow
-                  key={ev.id}
-                  event={ev}
-                  onEdit={handleEdit}
-                  onDelete={setDeletingEvent}
-                />
-              ))}
-            </tbody>
-          </table>
-        )}
+      {/* -- List -- */}
+      <div style={{ flex: 1, padding: "16px 16px 0" }}>
+        {filtered.length === 0
+          ? <EmptyState onAdd={() => { setEditingEvent(null); setShowModal(true); }} />
+          : filtered.map((ev, i) => (
+            <EventCard key={ev.id} event={ev} idx={i}
+              onEdit={ev => { setEditingEvent(ev); setShowModal(true); }}
+              onDelete={setDeletingEvent}
+            />
+          ))
+        }
       </div>
 
-      {/* Stats bar */}
-      {events.length > 0 && (
-        <div className="bg-white border-t border-slate-200 px-4 py-2 flex gap-4 text-xs text-slate-500 overflow-x-auto">
-          <span>{events.filter((e) => e.type === 'gig').length} Gigs</span>
-          <span>{events.filter((e) => e.type === 'vacation').length} Vacations</span>
-          <span>{events.filter((e) => e.type === 'audition').length} Auditions</span>
-          <span className="ml-auto font-medium text-slate-600">
-            {events.filter((e) => e.type === 'gig' && e.payment).reduce((sum, e) => {
-              const n = parseFloat(e.payment.replace(/[^0-9.]/g, ''));
-              return isNaN(n) ? sum : sum + n;
-            }, 0) > 0
-              ? `Total: $${events.filter((e) => e.type === 'gig' && e.payment).reduce((sum, e) => {
-                  const n = parseFloat(e.payment.replace(/[^0-9.]/g, ''));
-                  return isNaN(n) ? sum : sum + n;
-                }, 0).toLocaleString()}`
-              : ''}
-          </span>
-        </div>
-      )}
+      {/* -- FAB -- */}
+      <button
+        onClick={() => { setEditingEvent(null); setShowModal(true); }}
+        style={{
+          position: "fixed",
+          right: "max(20px, calc(50vw - 300px))",
+          bottom: "calc(var(--nav-h) + max(20px, env(safe-area-inset-bottom,0px)) + 8px)",
+          width: 56, height: 56, borderRadius: 28,
+          background: "linear-gradient(135deg,#6366f1,#4f46e5)",
+          color: "white", fontSize: 26, fontWeight: 300,
+          border: "none", cursor: "pointer",
+          boxShadow: "0 4px 6px rgba(0,0,0,0.1), 0 8px 24px rgba(79,70,229,0.4)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 40, transition: "transform 0.15s",
+          fontFamily: "inherit",
+        }}
+        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.08)"}
+        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+      >+</button>
 
       {showModal && (
-        <EventModal
-          event={editingEvent}
-          onSave={handleSave}
-          onClose={() => { setShowModal(false); setEditingEvent(null); }}
-        />
+        <EventModal event={editingEvent} onSave={handleSave}
+          onClose={() => { setShowModal(false); setEditingEvent(null); }} />
       )}
-
       {deletingEvent && (
-        <ConfirmDelete
-          event={deletingEvent}
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeletingEvent(null)}
-        />
+        <ConfirmDelete event={deletingEvent}
+          onConfirm={() => { deleteEvent(deletingEvent.id); setDeletingEvent(null); }}
+          onCancel={() => setDeletingEvent(null)} />
       )}
     </div>
   );

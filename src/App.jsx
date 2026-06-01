@@ -10,7 +10,13 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="flex flex-col min-h-[100dvh] bg-slate-50 max-w-2xl mx-auto relative">
+      <div style={{
+        maxWidth: 640,
+        margin: "0 auto",
+        minHeight: "100dvh",
+        position: "relative",
+        background: "#f1f5f9",
+      }}>
         <Routes>
           <Route
             path="/"

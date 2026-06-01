@@ -1,34 +1,68 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-export default function Navigation() {
-  const base =
-    'flex-1 flex flex-col items-center justify-center gap-1 py-2 text-xs font-medium transition-colors';
-  const active = 'text-blue-600';
-  const inactive = 'text-slate-500 hover:text-slate-700';
-
+function ScheduleIcon({ active }) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex safe-area-inset-bottom z-50">
-      <NavLink
-        to="/"
-        end
-        className={({ isActive }) => `${base} ${isActive ? active : inactive}`}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-        </svg>
-        List
-      </NavLink>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="6"  width="17" height="2"   rx="1" fill={active ? '#4f46e5' : '#94a3b8'} />
+      <rect x="3.5" y="11" width="17" height="2"   rx="1" fill={active ? '#4f46e5' : '#94a3b8'} />
+      <rect x="3.5" y="16" width="11" height="2"   rx="1" fill={active ? '#4f46e5' : '#94a3b8'} />
+    </svg>
+  );
+}
 
-      <NavLink
-        to="/calendar"
-        className={({ isActive }) => `${base} ${isActive ? active : inactive}`}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        Calendar
-      </NavLink>
+function CalendarIcon({ active }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="5" width="18" height="16" rx="3"
+        fill={active ? '#4f46e5' : 'none'}
+        stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="1.8"/>
+      <path d="M3 10h18" stroke={active ? 'white' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+      <path d="M8 3v4M16 3v4" stroke={active ? '#4f46e5' : '#94a3b8'} strokeWidth="1.8" strokeLinecap="round"/>
+      {active && <>
+        <circle cx="8"  cy="15" r="1.2" fill="white"/>
+        <circle cx="12" cy="15" r="1.2" fill="white"/>
+        <circle cx="16" cy="15" r="1.2" fill="white"/>
+      </>}
+    </svg>
+  );
+}
+
+export default function Navigation() {
+  return (
+    <nav
+      style={{
+        position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+        width: '100%', maxWidth: 640, zIndex: 50,
+        background: 'rgba(255,255,255,0.88)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderTop: '1px solid rgba(226,232,240,0.8)',
+      }}
+    >
+      <div className="flex" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}>
+        <NavLink to="/" end style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 10, gap: 4, textDecoration: 'none' }}>
+          {({ isActive }) => (<>
+            <div style={{ transition: 'transform 0.2s', transform: isActive ? 'scale(1.1)' : 'scale(1)' }}>
+              <ScheduleIcon active={isActive} />
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: isActive ? '#4f46e5' : '#94a3b8' }}>
+              SCHEDULE
+            </span>
+          </>)}
+        </NavLink>
+
+        <NavLink to="/calendar" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 10, gap: 4, textDecoration: 'none' }}>
+          {({ isActive }) => (<>
+            <div style={{ transition: 'transform 0.2s', transform: isActive ? 'scale(1.1)' : 'scale(1)' }}>
+              <CalendarIcon active={isActive} />
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: isActive ? '#4f46e5' : '#94a3b8' }}>
+              CALENDAR
+            </span>
+          </>)}
+        </NavLink>
+      </div>
     </nav>
   );
 }
